@@ -51,12 +51,7 @@
 // There are other times when this bug actually causes an application crash.
 // See the giant comment blocks below for several more examples.
 
-@interface SafeSectionChange : NSObject
-{
-	id <NSFetchedResultsSectionInfo> sectionInfo;
-	NSUInteger sectionIndex;
-	NSFetchedResultsChangeType changeType;
-}
+@interface SSSectionChange : NSObject
 
 @property (nonatomic, retain) id <NSFetchedResultsSectionInfo> sectionInfo;
 @property (nonatomic, assign) NSUInteger sectionIndex;
@@ -67,13 +62,7 @@
                changeType:(NSFetchedResultsChangeType)changeType;
 @end
 
-@interface SafeObjectChange : NSObject
-{
-	id object;
-	NSIndexPath *indexPath;
-	NSFetchedResultsChangeType changeType;
-	NSIndexPath *changedIndexPath;
-}
+@interface SSObjectChange : NSObject
 
 @property (nonatomic, retain) id object;
 @property (nonatomic, retain) NSIndexPath *indexPath;
@@ -92,13 +81,9 @@
 
 @end
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark -
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 @implementation SSFetchedResultsController {
-	id <SSFetchedResultsControllerDelegate> _safeDelegate;
-	
 	NSMutableArray *_insertedSections;
 	NSMutableArray *_deletedSections;
 	
@@ -134,6 +119,7 @@
 	return self;
 }
 
+
 - (void)dealloc
 {
 	[_insertedSections release];
@@ -147,9 +133,8 @@
 	[super dealloc];
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark Logic
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#pragma mark - Logic
 
 /**
  * Checks to see if there are unsafe changes in the current change set.
@@ -168,6 +153,7 @@
 	
 	return NO;
 }
+
 
 /**
  * Helper method for hasPossibleUpdateBug.
@@ -192,6 +178,7 @@
 	
 	[indexSet addIndex:(NSUInteger)indexPath.row];
 }
+
 
 /**
  * Checks to see if there are any moved objects that might have been improperly tagged as updated objects.
@@ -221,11 +208,11 @@
 		NSMutableIndexSet *sectionInsertSet = [[[NSMutableIndexSet alloc] init] autorelease];
 		NSMutableIndexSet *sectionDeleteSet = [[[NSMutableIndexSet alloc] init] autorelease];
 		
-		for (SafeSectionChange *sectionChange in _insertedSections)
+		for (SSSectionChange *sectionChange in _insertedSections)
 		{
 			[sectionInsertSet addIndex:sectionChange.sectionIndex];
 		}
-		for (SafeSectionChange *sectionChange in _deletedSections)
+		for (SSSectionChange *sectionChange in _deletedSections)
 		{
 			[sectionDeleteSet addIndex:sectionChange.sectionIndex];
 		}
@@ -278,21 +265,21 @@
 		NSMutableDictionary *objectInsertDict = [NSMutableDictionary dictionaryWithCapacity:numInsertedObjects];
 		NSMutableDictionary *objectDeleteDict = [NSMutableDictionary dictionaryWithCapacity:numDeletedObjects];
 		
-		for (SafeObjectChange *objectChange in _insertedObjects)
+		for (SSObjectChange *objectChange in _insertedObjects)
 		{
 			[self addIndexPath:objectChange.changedIndexPath toDictionary:objectInsertDict];
 		}
-		for (SafeObjectChange *objectChange in _deletedObjects)
+		for (SSObjectChange *objectChange in _deletedObjects)
 		{
 			[self addIndexPath:objectChange.indexPath toDictionary:objectDeleteDict];
 		}
-		for (SafeObjectChange *objectChange in _movedObjects)
+		for (SSObjectChange *objectChange in _movedObjects)
 		{
 			[self addIndexPath:objectChange.indexPath toDictionary:objectDeleteDict];
 			[self addIndexPath:objectChange.changedIndexPath toDictionary:objectInsertDict];
 		}
 		
-		for (SafeObjectChange *objectChange in _updatedObjects)
+		for (SSObjectChange *objectChange in _updatedObjects)
 		{
 			if (DEBUG)
 			{
@@ -377,11 +364,10 @@
 	// The end result is similar to the example given at the very top of this file.
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark Processing
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-- (void)notifyDelegateOfSectionChange:(SafeSectionChange *)sectionChange
+#pragma mark - Processing
+
+- (void)notifyDelegateOfSectionChange:(SSSectionChange *)sectionChange
 {
 	SEL selector = @selector(controller:didChangeSection:atIndex:forChangeType:);
 	
@@ -394,7 +380,8 @@
 	}
 }
 
-- (void)notifyDelegateOfObjectChange:(SafeObjectChange *)objectChange
+
+- (void)notifyDelegateOfObjectChange:(SSObjectChange *)objectChange
 {
 	SEL selector = @selector(controller:didChangeObject:atIndexPath:forChangeType:newIndexPath:);
 	
@@ -408,13 +395,14 @@
 	}
 }
 
+
 - (void)processSectionChanges
 {
-	for (SafeSectionChange *sectionChange in _insertedSections)
+	for (SSSectionChange *sectionChange in _insertedSections)
 	{
 		[self notifyDelegateOfSectionChange:sectionChange];
 	}
-	for (SafeSectionChange *sectionChange in _deletedSections)
+	for (SSSectionChange *sectionChange in _deletedSections)
 	{
 		[self notifyDelegateOfSectionChange:sectionChange];
 	}
@@ -431,19 +419,19 @@
 	
 	// Process object changes
 	
-	for (SafeObjectChange *objectChange in _insertedObjects)
+	for (SSObjectChange *objectChange in _insertedObjects)
 	{
 		[self notifyDelegateOfObjectChange:objectChange];
 	}
-	for (SafeObjectChange *objectChange in _deletedObjects)
+	for (SSObjectChange *objectChange in _deletedObjects)
 	{
 		[self notifyDelegateOfObjectChange:objectChange];
 	}
-	for (SafeObjectChange *objectChange in _updatedObjects)
+	for (SSObjectChange *objectChange in _updatedObjects)
 	{
 		[self notifyDelegateOfObjectChange:objectChange];
 	}
-	for (SafeObjectChange *objectChange in _movedObjects)
+	for (SSObjectChange *objectChange in _movedObjects)
 	{
 		[self notifyDelegateOfObjectChange:objectChange];
 	}
@@ -451,34 +439,35 @@
 	[pool release];
 }
 
+
 - (void)processChanges
 {
 	if (DEBUG)
 	{
-		NSLog(@"SafeFetchedResultsController: processChanges");
+		NSLog(@"SSFetchedResultsController: processChanges");
 		
-		for (SafeSectionChange *sectionChange in _insertedSections)
+		for (SSSectionChange *sectionChange in _insertedSections)
 		{
 			NSLog(@"%@", sectionChange);
 		}
-		for (SafeSectionChange *sectionChange in _deletedSections)
+		for (SSSectionChange *sectionChange in _deletedSections)
 		{
 			NSLog(@"%@", sectionChange);
 		}
 		
-		for (SafeObjectChange *objectChange in _insertedObjects)
+		for (SSObjectChange *objectChange in _insertedObjects)
 		{
 			NSLog(@"%@", objectChange);
 		}
-		for (SafeObjectChange *objectChange in _deletedObjects)
+		for (SSObjectChange *objectChange in _deletedObjects)
 		{
 			NSLog(@"%@", objectChange);
 		}
-		for (SafeObjectChange *objectChange in _updatedObjects)
+		for (SSObjectChange *objectChange in _updatedObjects)
 		{
 			NSLog(@"%@", objectChange);
 		}
-		for (SafeObjectChange *objectChange in _movedObjects)
+		for (SSObjectChange *objectChange in _movedObjects)
 		{
 			NSLog(@"%@", objectChange);
 		}
@@ -508,14 +497,14 @@
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark NSFetchedResultsControllerDelegate
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#pragma mark - NSFetchedResultsControllerDelegate
 
 - (void)controllerWillChangeContent:(NSFetchedResultsController *)controller
 {
 	// Nothing to do yet
 }
+
 
 - (void)controller:(NSFetchedResultsController *)controller
   didChangeSection:(id <NSFetchedResultsSectionInfo>)sectionInfo
@@ -524,7 +513,7 @@
 {
 	// Queue changes for processing later
 	
-	SafeSectionChange *sectionChange = [[SafeSectionChange alloc] initWithSectionInfo:sectionInfo
+	SSSectionChange *sectionChange = [[SSSectionChange alloc] initWithSectionInfo:sectionInfo
 	                                                                            index:sectionIndex
 	                                                                       changeType:changeType];
 	NSMutableArray *sectionChanges = nil;
@@ -539,6 +528,7 @@
 	[sectionChange release];
 }
 
+
 - (void)controller:(NSFetchedResultsController *)controller
    didChangeObject:(id)anObject
        atIndexPath:(NSIndexPath *)indexPath
@@ -547,7 +537,7 @@
 {
 	// Queue changes for processing later
 	
-	SafeObjectChange *objectChange = [[SafeObjectChange alloc] initWithObject:anObject
+	SSObjectChange *objectChange = [[SSObjectChange alloc] initWithObject:anObject
 	                                                                indexPath:indexPath
 	                                                               changeType:changeType
 	                                                             newIndexPath:newIndexPath];
@@ -565,6 +555,7 @@
 	[objectChange release];
 }
 
+
 - (void)controllerDidChangeContent:(NSFetchedResultsController *)controller
 {
 	[self processChanges];
@@ -580,21 +571,19 @@
 
 @end
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark -
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-@implementation SafeSectionChange
+@implementation SSSectionChange
 
-@synthesize sectionInfo;
-@synthesize sectionIndex;
-@synthesize changeType;
+@synthesize sectionInfo = _sectionInfo;
+@synthesize sectionIndex = _sectionIndex;
+@synthesize changeType = _changeType;
 
 - (id)initWithSectionInfo:(id <NSFetchedResultsSectionInfo>)aSectionInfo
                     index:(NSUInteger)aSectionIndex
                changeType:(NSFetchedResultsChangeType)aChangeType
 {
-	if((self = [super init]))
+	if ((self = [super init]))
 	{
 		self.sectionInfo = aSectionInfo;
 		self.sectionIndex = aSectionIndex;
@@ -603,9 +592,10 @@
 	return self;
 }
 
+
 - (NSString *)changeTypeString
 {
-	switch (changeType)
+	switch (_changeType)
 	{
 		case NSFetchedResultsChangeInsert : return @"Insert";
 		case NSFetchedResultsChangeDelete : return @"Delete";
@@ -614,11 +604,13 @@
 	return nil;
 }
 
+
 - (NSString *)description
 {
-	return [NSString stringWithFormat:@"<SafeSectionChange changeType(%@) index(%lu)>",
-			[self changeTypeString], sectionIndex];
+	return [NSString stringWithFormat:@"<SSSectionChange changeType(%@) index(%lu)>",
+			[self changeTypeString], _sectionIndex];
 }
+
 
 - (void)dealloc
 {
@@ -629,23 +621,21 @@
 
 @end
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark -
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-@implementation SafeObjectChange
+@implementation SSObjectChange
 
-@synthesize object;
-@synthesize indexPath;
-@synthesize changeType;
-@synthesize changedIndexPath;
+@synthesize object = object_object;
+@synthesize indexPath = _indexPath;
+@synthesize changeType = _changeType;
+@synthesize changedIndexPath = _changedIndexPath;
 
 - (id)initWithObject:(id)anObject
            indexPath:(NSIndexPath *)anIndexPath
           changeType:(NSFetchedResultsChangeType)aChangeType
         newIndexPath:(NSIndexPath *)aNewIndexPath
 {
-	if((self = [super init]))
+	if ((self = [super init]))
 	{
 		self.object = anObject;
 		self.indexPath = anIndexPath;
@@ -655,9 +645,10 @@
 	return self;
 }
 
+
 - (NSString *)changeTypeString
 {
-	switch (changeType)
+	switch (_changeType)
 	{
 		case NSFetchedResultsChangeInsert : return @"Insert";
 		case NSFetchedResultsChangeDelete : return @"Delete";
@@ -668,6 +659,7 @@
 	return nil;
 }
 
+
 - (NSString *)stringFromIndexPath:(NSIndexPath *)ip
 {
 	if (ip == nil) return @"nil";
@@ -675,13 +667,15 @@
 	return [NSString stringWithFormat:@"[%lu,%lu]", ip.section, ip.row];
 }
 
+
 - (NSString *)description
 {
-	return [NSString stringWithFormat:@"<SafeObjectChange changeType(%@) indexPath(%@) newIndexPath(%@)>", 
+	return [NSString stringWithFormat:@"<SSObjectChange changeType(%@) indexPath(%@) newIndexPath(%@)>", 
 			[self changeTypeString],
-			[self stringFromIndexPath:indexPath],
-			[self stringFromIndexPath:changedIndexPath]];
+			[self stringFromIndexPath:_indexPath],
+			[self stringFromIndexPath:_changedIndexPath]];
 }
+
 
 - (void)dealloc
 {
